@@ -1,142 +1,168 @@
 import { success, error } from "../utils/response.js";
+import { adminOnly } from "../middleware/adminOnly.js";
 
 
-export async function dashboardRouter(request, env){
+export async function dashboardRouter(request, env) {
 
 
-const url = new URL(request.url);
+    const url = new URL(request.url);
 
 
 
-if(
-request.method === "GET" &&
-url.pathname === "/api/v1/dashboard"
-){
+    if (
+        request.method === "GET" &&
+        url.pathname === "/api/v1/dashboard"
+    ) {
 
 
-try{
 
+        // بررسی دسترسی ادمین
 
-// تعداد محصولات
+        const auth = await adminOnly(
+            request,
+            env
+        );
 
-const products =
-await env.DB.prepare(`
 
-SELECT COUNT(*) as count
+        if (auth instanceof Response) {
+            return auth;
+        }
 
-FROM products
 
-`)
-.first();
 
 
+        try {
 
 
-// تعداد مشتری‌ها
 
-const customers =
-await env.DB.prepare(`
+            // تعداد محصولات
 
-SELECT COUNT(*) as count
+            const products =
+            await env.DB.prepare(`
+                SELECT COUNT(*) as count
+                FROM products
+            `)
+            .first();
 
-FROM customers
 
-`)
-.first();
 
 
 
+            // تعداد مشتری‌ها
 
+            const customers =
+            await env.DB.prepare(`
+                SELECT COUNT(*) as count
+                FROM customers
+            `)
+            .first();
 
-// سفارش‌های امروز
 
-const todayOrders =
-await env.DB.prepare(`
 
-SELECT 
 
-COUNT(*) as orders,
-COALESCE(SUM(total_amount),0) as sales,
-COALESCE(SUM(total_profit),0) as profit
 
-FROM orders
 
-WHERE DATE(created_at)=DATE('now')
 
-`)
-.first();
+            // سفارش‌های امروز
 
+            const todayOrders =
+            await env.DB.prepare(`
+                SELECT
 
+                COUNT(*) as orders,
 
+                COALESCE(SUM(total_amount),0) as sales,
 
+                COALESCE(SUM(total_profit),0) as profit
 
-// کالاهای کم موجودی
+                FROM orders
 
-const lowStock =
-await env.DB.prepare(`
+                WHERE DATE(created_at)=DATE('now')
 
-SELECT COUNT(*) as count
+            `)
+            .first();
 
-FROM inventory
 
-WHERE quantity <= minimum_stock
 
-AND alert_enabled=1
 
-`)
-.first();
 
 
 
+            // کالاهای کم موجودی
 
+            const lowStock =
+            await env.DB.prepare(`
+                SELECT COUNT(*) as count
 
+                FROM inventory
 
-return success({
+                WHERE quantity <= minimum_stock
 
-products_count:
-products.count,
+                AND alert_enabled=1
 
+            `)
+            .first();
 
-customers_count:
-customers.count,
 
 
-today:{
 
-orders:
-todayOrders.orders,
 
-sales:
-todayOrders.sales,
 
-profit:
-todayOrders.profit
 
-},
+            return success({
 
+                products_count:
+                products.count,
 
-low_stock_products:
-lowStock.count
 
+                customers_count:
+                customers.count,
 
-});
 
 
+                today:{
 
-}
+                    orders:
+                    todayOrders.orders,
 
-catch(err){
 
-return error(err.message,500);
+                    sales:
+                    todayOrders.sales,
 
-}
 
+                    profit:
+                    todayOrders.profit
 
-}
+                },
 
 
 
-return null;
+                low_stock_products:
+                lowStock.count
+
+            });
+
+
+
+        }
+
+        catch(err){
+
+
+            return error(
+                err.message,
+                500
+            );
+
+
+        }
+
+
+    }
+
+
+
+    return null;
 
 
 }

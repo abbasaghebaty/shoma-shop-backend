@@ -1,0 +1,10 @@
+name = "shoma-shop-backend"
+
+main = "src/index.js"
+
+compatibility_date = "2026-07-25"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "shoma-shop-site"
+database_id = "c90bcfb9-cce5-49e9-b6df-390fabc4558d"

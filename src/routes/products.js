@@ -1,59 +1,72 @@
 import { success, error } from "../utils/response.js";
 
-import {
-getProducts,
-getProduct,
-createProduct,
-updateProduct,
-deleteProduct
-
-} from "../services/productService.js";
-
-
 
 export async function productsRouter(request, env){
-
 
 const url = new URL(request.url);
 
 
-
 /*
-GET ALL
+GET ALL PRODUCTS
 */
 
 if(
-request.method==="GET" &&
-url.pathname==="/api/v1/products"
+request.method === "GET" &&
+url.pathname === "/api/v1/products"
 ){
 
 const products =
-await getProducts(env.DB);
+await env.DB.prepare(`
+
+SELECT 
+products.*,
+categories.name AS category_name,
+brands.name AS brand_name
+
+FROM products
+
+LEFT JOIN categories
+ON categories.id = products.category_id
+
+LEFT JOIN brands
+ON brands.id = products.brand_id
+
+ORDER BY products.id DESC
+
+`).all();
 
 
-return success(products);
+return success(products.results);
 
 }
 
 
 
-
 /*
-GET ONE
+GET SINGLE PRODUCT
 */
 
 if(
-request.method==="GET" &&
+request.method === "GET" &&
 url.pathname.match(/^\/api\/v1\/products\/\d+$/)
 ){
 
-
 const id =
-url.pathname.split("/").pop();
+url.pathname.split("/")[4];
 
 
 const product =
-await getProduct(env.DB,id);
+await env.DB.prepare(`
+
+SELECT *
+
+FROM products
+
+WHERE id = ?
+
+`)
+.bind(id)
+.first();
 
 
 
@@ -69,15 +82,80 @@ return success(product);
 
 
 
-
 /*
-CREATE
+CREATE PRODUCT
 */
 
 if(
-request.method==="POST" &&
-url.pathname==="/api/v1/products"
+request.method === "POST" &&
+url.pathname === "/api/v1/products"
 ){
+
+const body =
+await request.json();
+
+
+
+const result =
+await env.DB.prepare(`
+
+INSERT INTO products
+(
+product_code,
+name,
+barcode,
+category_id,
+brand_id,
+variant,
+description,
+unit
+
+)
+
+VALUES
+(?,?,?,?,?,?,?,?)
+
+`)
+.bind(
+
+body.product_code,
+body.name,
+body.barcode ?? null,
+body.category_id ?? null,
+body.brand_id ?? null,
+body.variant ?? null,
+body.description ?? null,
+body.unit ?? "عدد"
+
+)
+.run();
+
+
+
+return success({
+
+id: result.meta.last_row_id,
+message:"product created"
+
+});
+
+}
+
+
+
+
+/*
+UPDATE PRODUCT
+*/
+
+if(
+request.method === "PUT" &&
+url.pathname.match(/^\/api\/v1\/products\/\d+$/)
+){
+
+
+const id =
+url.pathname.split("/")[4];
 
 
 const body =
@@ -85,44 +163,42 @@ await request.json();
 
 
 
-const id =
-await createProduct(env.DB,body);
+await env.DB.prepare(`
 
+UPDATE products
 
+SET
 
-return success({
+name=?,
+barcode=?,
+category_id=?,
+brand_id=?,
+variant=?,
+description=?,
+unit=?,
+updated_at=CURRENT_TIMESTAMP
+
+WHERE id=?
+
+`)
+.bind(
+
+body.name,
+body.barcode ?? null,
+body.category_id ?? null,
+body.brand_id ?? null,
+body.variant ?? null,
+body.description ?? null,
+body.unit ?? "عدد",
 id
-},201);
 
-}
+)
+.run();
 
-
-
-
-/*
-UPDATE
-*/
-
-if(
-request.method==="PUT" &&
-url.pathname.match(/^\/api\/v1\/products\/\d+$/)
-){
-
-
-const id =
-url.pathname.split("/").pop();
-
-
-const body =
-await request.json();
-
-
-
-await updateProduct(env.DB,id,body);
 
 
 return success({
-message:"updated"
+message:"product updated"
 });
 
 
@@ -131,32 +207,43 @@ message:"updated"
 
 
 
+
 /*
-DELETE
+DELETE PRODUCT
 */
 
 if(
-request.method==="DELETE" &&
+request.method === "DELETE" &&
 url.pathname.match(/^\/api\/v1\/products\/\d+$/)
 ){
 
 
 const id =
-url.pathname.split("/").pop();
+url.pathname.split("/")[4];
 
 
-await deleteProduct(env.DB,id);
+
+await env.DB.prepare(`
+
+DELETE FROM products
+
+WHERE id=?
+
+`)
+.bind(id)
+.run();
+
 
 
 return success({
-message:"deleted"
+message:"product deleted"
 });
 
 
 }
+
 
 
 return null;
-
 
 }

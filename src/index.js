@@ -2,6 +2,7 @@ import { productsRouter } from "./routes/products.js";
 import { pricesRouter } from "./routes/prices.js";
 import { inventoryRouter } from "./routes/inventory.js";
 import { adminProductsRouter } from "./routes/admin-products.js";
+import { customersRouter } from "./routes/customers.js";
 
 import { error } from "./utils/response.js";
 
@@ -77,6 +78,19 @@ await adminProductsRouter(request, env);
 
 if(adminProductResponse){
     return adminProductResponse;
+}
+
+
+
+
+// Customers API
+
+const customersResponse =
+await customersRouter(request, env);
+
+
+if(customersResponse){
+    return customersResponse;
 }
 
 

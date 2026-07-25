@@ -1,6 +1,7 @@
 import { productsRouter } from "./routes/products.js";
 import { pricesRouter } from "./routes/prices.js";
 import { inventoryRouter } from "./routes/inventory.js";
+import { adminProductsRouter } from "./routes/admin-products.js";
 
 import { error } from "./utils/response.js";
 
@@ -14,6 +15,7 @@ const url = new URL(request.url);
 
 
 // تست سلامت Worker
+
 if(
 request.method === "GET" &&
 url.pathname === "/"
@@ -40,6 +42,7 @@ if(productResponse){
 
 
 
+
 // Prices API
 
 const priceResponse =
@@ -52,6 +55,7 @@ if(priceResponse){
 
 
 
+
 // Inventory API
 
 const inventoryResponse =
@@ -60,6 +64,19 @@ await inventoryRouter(request, env);
 
 if(inventoryResponse){
     return inventoryResponse;
+}
+
+
+
+
+// Admin Products API
+
+const adminProductResponse =
+await adminProductsRouter(request, env);
+
+
+if(adminProductResponse){
+    return adminProductResponse;
 }
 
 

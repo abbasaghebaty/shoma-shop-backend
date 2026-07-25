@@ -1,5 +1,6 @@
 import { productsRouter } from "./routes/products.js";
 import { error } from "./utils/response.js";
+import { pricesRouter } from "./routes/prices.js";
 
 
 export default {
@@ -10,14 +11,23 @@ async fetch(request, env) {
   try {
 
 
-    const productResponse =
-      await productsRouter(request, env);
+const productResponse =
+await productsRouter(request, env);
 
 
-    if(productResponse){
-      return productResponse;
-    }
+if(productResponse){
+  return productResponse;
+}
 
+
+
+const priceResponse =
+await pricesRouter(request, env);
+
+
+if(priceResponse){
+  return priceResponse;
+}
 
 
     return error(

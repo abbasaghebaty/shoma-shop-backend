@@ -1,6 +1,8 @@
 import { productsRouter } from "./routes/products.js";
-import { error } from "./utils/response.js";
 import { pricesRouter } from "./routes/prices.js";
+import { inventoryRouter } from "./routes/inventory.js";
+
+import { error } from "./utils/response.js";
 
 
 export default {
@@ -8,52 +10,68 @@ export default {
 async fetch(request, env) {
 
 
-  try {
+const url = new URL(request.url);
 
+
+// تست سلامت Worker
+if(
+request.method === "GET" &&
+url.pathname === "/"
+){
+
+return Response.json({
+    success:true,
+    message:"Shoma Shop API is running"
+});
+
+}
+
+
+
+// Products API
 
 const productResponse =
 await productsRouter(request, env);
 
 
 if(productResponse){
-  return productResponse;
+    return productResponse;
 }
 
 
+
+// Prices API
 
 const priceResponse =
 await pricesRouter(request, env);
 
 
 if(priceResponse){
-  return priceResponse;
+    return priceResponse;
 }
 
 
-    return error(
-      "Route not found",
-      404
-    );
+
+// Inventory API
+
+const inventoryResponse =
+await inventoryRouter(request, env);
 
 
-  } catch(error){
+if(inventoryResponse){
+    return inventoryResponse;
+}
 
 
-    return new Response(
-      JSON.stringify({
-        success:false,
-        error:error.message
-      }),
-      {
-        status:500,
-        headers:{
-          "Content-Type":"application/json"
-        }
-      }
-    );
 
 
-  }
+// اگر هیچ Route پیدا نشد
+
+return error(
+"Route not found",
+404
+);
+
 
 }
 

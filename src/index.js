@@ -1,11 +1,7 @@
 import { productsRouter } from "./routes/products.js";
 import { pricesRouter } from "./routes/prices.js";
 import { inventoryRouter } from "./routes/inventory.js";
-import { adminProductsRouter } from "./routes/admin-products.js";
-import { customersRouter } from "./routes/customers.js";
-import { ordersRouter } from "./routes/orders.js";
-import { paymentsRouter } from "./routes/payments.js";
-import { dashboardRouter } from "./routes/dashboard.js";
+import { authRouter } from "./routes/auth.js";
 
 import { error } from "./utils/response.js";
 
@@ -18,7 +14,7 @@ async fetch(request, env) {
 const url = new URL(request.url);
 
 
-// Health Check
+// تست سلامت Worker
 
 if(
 request.method === "GET" &&
@@ -36,6 +32,20 @@ return Response.json({
 
 
 
+// Auth API
+
+const authResponse =
+await authRouter(request, env);
+
+
+if(authResponse){
+
+    return authResponse;
+
+}
+
+
+
 
 // Products API
 
@@ -44,9 +54,10 @@ await productsRouter(request, env);
 
 
 if(productResponse){
-    return productResponse;
-}
 
+    return productResponse;
+
+}
 
 
 
@@ -58,9 +69,10 @@ await pricesRouter(request, env);
 
 
 if(priceResponse){
-    return priceResponse;
-}
 
+    return priceResponse;
+
+}
 
 
 
@@ -72,84 +84,15 @@ await inventoryRouter(request, env);
 
 
 if(inventoryResponse){
+
     return inventoryResponse;
+
 }
 
 
 
 
-
-// Admin Products API
-
-const adminProductResponse =
-await adminProductsRouter(request, env);
-
-
-if(adminProductResponse){
-    return adminProductResponse;
-}
-
-
-
-
-
-// Customers API
-
-const customersResponse =
-await customersRouter(request, env);
-
-
-if(customersResponse){
-    return customersResponse;
-}
-
-
-
-
-
-// Orders API
-
-const ordersResponse =
-await ordersRouter(request, env);
-
-
-if(ordersResponse){
-    return ordersResponse;
-}
-
-
-
-
-
-// Payments API
-
-const paymentsResponse =
-await paymentsRouter(request, env);
-
-
-if(paymentsResponse){
-    return paymentsResponse;
-}
-
-
-
-
-
-// Dashboard API
-
-const dashboardResponse =
-await dashboardRouter(request, env);
-
-
-if(dashboardResponse){
-    return dashboardResponse;
-}
-
-
-
-
-
-// Route not found
+// Route پیدا نشد
 
 return error(
 "Route not found",

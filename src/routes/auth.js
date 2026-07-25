@@ -2,134 +2,164 @@ import { verifyPassword, generateToken } from "../utils/auth.js";
 import { error } from "../utils/response.js";
 
 
-export async function authRouter(request, env){
+export async function authRouter(request, env) {
 
-const url = new URL(request.url);
-
-
-// LOGIN
-
-if(
-request.method === "POST" &&
-url.pathname === "/api/v1/auth/login"
-){
-
-
-const body = await request.json();
-
-
-const username = body.username;
-const password = body.password;
+    const url = new URL(request.url);
 
 
 
-if(!username || !password){
-
-return error(
-"Username and password required",
-400
-);
-
-}
+    // LOGIN
+    if (
+        request.method === "POST" &&
+        url.pathname === "/api/v1/auth/login"
+    ) {
 
 
+        const body = await request.json();
 
-// پیدا کردن ادمین
 
-const admin = await env.DB
-.prepare(
-`
-SELECT *
-FROM admins
-WHERE username = ?
-AND is_active = 1
-`
-)
-.bind(username)
-.first();
+        const username = body.username;
+        const password = body.password;
 
 
 
-if(!admin){
+        if (!username || !password) {
 
-return error(
-"Invalid credentials",
-401
-);
+            return error(
+                "Username and password required",
+                400
+            );
 
-}
-
-
-
-// بررسی رمز
-
-const valid =
-await verifyPassword(
-password,
-admin.password_hash
-);
+        }
 
 
 
-if(!valid){
+        // پیدا کردن ادمین
 
-return error(
-"Invalid credentials",
-401
-);
-
-}
-
-
-
-// ساخت session token
-
-const token =
-generateToken();
+        const admin = await env.DB
+            .prepare(
+                `
+                SELECT *
+                FROM admins
+                WHERE username = ?
+                AND is_active = 1
+                `
+            )
+            .bind(username)
+            .first();
 
 
 
-await env.DB
-.prepare(
-`
-INSERT INTO admin_sessions
-(
-admin_id,
-token
-)
-VALUES
-(?,?)
-`
-)
-.bind(
-admin.id,
-token
-)
-.run();
+        if (!admin) {
+
+            return error(
+                "Invalid credentials",
+                401
+            );
+
+        }
 
 
 
-return Response.json({
+        // بررسی رمز هش شده
 
-success:true,
-
-token,
-
-admin:{
-id:admin.id,
-username:admin.username,
-name:admin.name,
-role:admin.role
-}
-
-});
-
-
-}
+        const valid =
+            await verifyPassword(
+                password,
+                admin.password_hash
+            );
 
 
 
-return null;
+        if (!valid) {
 
+            return error(
+                "Invalid credentials",
+                401
+            );
+
+        }
+
+
+
+
+        // ساخت توکن Session
+
+        const token =
+            generateToken();
+
+
+
+        // اطلاعات دستگاه
+
+        const userAgent =
+            request.headers.get("User-Agent") || "unknown";
+
+
+        const ip =
+            request.headers.get("CF-Connecting-IP") || "unknown";
+
+
+
+
+        // ذخیره Session
+
+        await env.DB
+            .prepare(
+                `
+                INSERT INTO admin_sessions
+                (
+                    admin_id,
+                    token,
+                    device_name,
+                    user_agent,
+                    expires_at
+                )
+                VALUES
+                (
+                    ?,
+                    ?,
+                    ?,
+                    ?,
+                    datetime('now','+30 days')
+                )
+                `
+            )
+            .bind(
+                admin.id,
+                token,
+                ip,
+                userAgent
+            )
+            .run();
+
+
+
+
+
+        return Response.json({
+
+            success: true,
+
+            token,
+
+
+            admin: {
+
+                id: admin.id,
+                username: admin.username,
+                name: admin.name,
+                role: admin.role
+
+            }
+
+        });
+
+    }
+
+
+
+
+    return null;
 
 }

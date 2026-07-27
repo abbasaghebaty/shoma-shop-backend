@@ -9,8 +9,12 @@ const url = new URL(request.url);
 
 
 /*
-ایجاد سفارش
+ایجاد سفارش (توسط مشتری - نیازی به لاگین ادمین ندارد)
 POST /api/v1/orders
+
+نکته مهم: customer_id باید از قبل در جدول customers ثبت شده باشد.
+یعنی مشتری باید اول (مثلا با شماره تلفن) در سیستم ثبت‌نام کرده باشد
+تا بتواند سفارش بزند. این جلوی سفارش‌های ناشناس و اسپم را می‌گیرد.
 */
 
 if (
@@ -19,20 +23,20 @@ if (
 ) {
 
 
-    // فقط ادمین می‌تواند سفارش ثبت کند
-    const auth = await adminOnly(request, env);
-
-    if (auth instanceof Response) {
-        return auth;
-    }
-
-
-
     const body = await request.json();
 
 
 
-    // بررسی اینکه اقلام سفارش وجود دارد
+    if (!body.customer_id) {
+
+        return error(
+            "برای ثبت سفارش باید مشتری مشخص باشد (ابتدا ثبت‌نام کنید)",
+            400
+        );
+
+    }
+
+
 
     if (!Array.isArray(body.items) || body.items.length === 0) {
 
@@ -58,13 +62,32 @@ if (
     try {
 
 
-        // ساخت شماره سفارش یکتا
+        const customer =
+            await env.DB.prepare(`
+                SELECT id
+                FROM customers
+                WHERE id = ?
+            `)
+            .bind(body.customer_id)
+            .first();
+
+
+        if (!customer) {
+
+            return error(
+                "مشتری با این شناسه ثبت نشده است. لطفا ابتدا ثبت‌نام کنید",
+                404
+            );
+
+        }
+
+
+
         const orderNumber =
             "ORD-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
 
 
 
-        // بررسی موجودی کافی برای همه اقلام قبل از هرگونه تغییر
         for (const item of body.items) {
 
             const stock = await env.DB.prepare(`
@@ -101,8 +124,6 @@ if (
 
 
 
-        // ساخت سفارش
-
         const order =
             await env.DB.prepare(`
                 INSERT INTO orders
@@ -121,8 +142,8 @@ if (
             `)
             .bind(
                 orderNumber,
-                body.customer_id ?? null,
-                body.source ?? "حضوری",
+                body.customer_id,
+                body.source ?? "سایت",
                 0,
                 0,
                 0,
@@ -141,14 +162,12 @@ if (
 
 
 
-        // ثبت اقلام سفارش
-
         for (const item of body.items) {
 
 
             const product =
                 await env.DB.prepare(`
-                    SELECT purchase_price
+                    SELECT purchase_price, consumer_price
                     FROM product_prices
                     WHERE product_id = ?
                 `)
@@ -160,8 +179,27 @@ if (
                 product?.purchase_price ?? 0;
 
 
+            // نکته امنیتی مهم: قیمت فروش از خودِ سرور خوانده می‌شود
+            // نه از چیزی که کاربر در body فرستاده. اگر قیمتِ ارسالی توسط
+            // کاربر را مستقیم قبول کنیم، هرکسی می‌تواند قیمت را دستکاری
+            // کند و کالا را با قیمت دلخواه خودش ثبت کند.
+
+            const salePrice =
+                product?.consumer_price ?? item.sale_price ?? 0;
+
+
+            if (!salePrice) {
+
+                return error(
+                    `قیمت برای کالای ${item.product_id} ثبت نشده است`,
+                    400
+                );
+
+            }
+
+
             const profit =
-                (item.sale_price - purchasePrice) * item.quantity;
+                (salePrice - purchasePrice) * item.quantity;
 
 
             await env.DB.prepare(`
@@ -181,19 +219,17 @@ if (
                 orderId,
                 item.product_id,
                 item.quantity,
-                item.sale_price,
+                salePrice,
                 purchasePrice,
                 profit
             )
             .run();
 
 
-            totalAmount += item.sale_price * item.quantity;
+            totalAmount += salePrice * item.quantity;
             totalProfit += profit;
 
 
-
-            // کم کردن موجودی
 
             await env.DB.prepare(`
                 UPDATE inventory
@@ -210,8 +246,6 @@ if (
             .run();
 
 
-
-            // ثبت تراکنش انبار
 
             await env.DB.prepare(`
                 INSERT INTO inventory_transactions
@@ -241,10 +275,6 @@ if (
 
 
 
-        // آپدیت مبلغ سفارش
-
-        const debtAmount = totalAmount;
-
         await env.DB.prepare(`
             UPDATE orders
             SET
@@ -258,15 +288,13 @@ if (
         .bind(
             totalAmount,
             totalProfit,
-            debtAmount,
+            totalAmount,
             "پرداخت نشده",
             orderId
         )
         .run();
 
 
-
-        // لاگ فعالیت
 
         await env.DB.prepare(`
             INSERT INTO activity_logs
@@ -281,11 +309,11 @@ if (
             (?, ?, ?, ?, ?)
         `)
         .bind(
-            auth.username ?? "admin",
+            "customer:" + body.customer_id,
             "CREATE",
             "orders",
             orderId,
-            "ثبت سفارش جدید"
+            "ثبت سفارش جدید توسط مشتری"
         )
         .run();
 
@@ -293,11 +321,10 @@ if (
 
         return success({
 
-            message: "order created",
+            message: "سفارش با موفقیت ثبت شد",
             order_id: orderId,
             order_number: orderNumber,
-            total: totalAmount,
-            profit: totalProfit
+            total: totalAmount
 
         });
 
@@ -317,7 +344,7 @@ if (
 
 
 /*
-لیست سفارش‌ها
+لیست سفارش‌ها (فقط ادمین)
 GET /api/v1/orders
 */
 
@@ -358,7 +385,7 @@ if (
 
 
 /*
-یک سفارش با جزئیات کامل اقلامش
+یک سفارش با جزئیات کامل اقلامش (فقط ادمین)
 GET /api/v1/orders/:id
 */
 

@@ -1,5 +1,5 @@
 import { verifyPassword, generateToken } from "../utils/auth.js";
-import { error } from "../utils/response.js";
+import { error, success, corsHeaders } from "../utils/response.js";
 
 
 export async function authRouter(request, env) {
@@ -136,24 +136,32 @@ export async function authRouter(request, env) {
 
 
 
+        return new Response(
+            JSON.stringify({
 
-        return Response.json({
+                success: true,
 
-            success: true,
-
-            token,
+                token,
 
 
-            admin: {
+                admin: {
 
-                id: admin.id,
-                username: admin.username,
-                name: admin.name,
-                role: admin.role
+                    id: admin.id,
+                    username: admin.username,
+                    name: admin.name,
+                    role: admin.role
 
+                }
+
+            }),
+            {
+                status: 200,
+                headers: {
+                    "Content-Type": "application/json",
+                    ...corsHeaders
+                }
             }
-
-        });
+        );
 
     }
 

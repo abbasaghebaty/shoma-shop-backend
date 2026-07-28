@@ -1,4 +1,5 @@
 import { success } from "../utils/response.js";
+import { adminOnly } from "../middleware/adminOnly.js";
 
 
 
@@ -10,7 +11,7 @@ const url = new URL(request.url);
 
 
 /*
-نمایش موجودی
+نمایش موجودی (فقط ادمین)
 GET /api/v1/inventory
 */
 
@@ -18,6 +19,9 @@ if(
 request.method === "GET" &&
 url.pathname === "/api/v1/inventory"
 ){
+
+const auth = await adminOnly(request, env);
+if (auth instanceof Response) return auth;
 
 
 const data = await env.DB.prepare(`
@@ -50,13 +54,16 @@ return success(data.results);
 
 
 /*
-کالاهای کم موجود
+کالاهای کم موجود (فقط ادمین)
 */
 
 if(
 request.method === "GET" &&
 url.pathname === "/api/v1/inventory/low-stock"
 ){
+
+const auth = await adminOnly(request, env);
+if (auth instanceof Response) return auth;
 
 
 const data = await env.DB.prepare(`

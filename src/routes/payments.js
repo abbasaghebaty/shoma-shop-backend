@@ -1,4 +1,3 @@
-cat > /home/claude/src_routes_payments.js << 'ENDOFFILE'
 import { success, error } from "../utils/response.js";
 import { adminOnly } from "../middleware/adminOnly.js";
 
@@ -249,5 +248,3 @@ return null;
 
 
 }
-ENDOFFILE
-echo "done"

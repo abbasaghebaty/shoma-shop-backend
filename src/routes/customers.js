@@ -36,8 +36,6 @@ if (
                 address,
                 customer_type,
                 source,
-                telegram_chat_id IS NOT NULL AS telegram_linked,
-                password_hash IS NOT NULL AS has_password,
                 created_at
             FROM customers
             ORDER BY id DESC
@@ -83,8 +81,6 @@ if (
                 address,
                 customer_type,
                 source,
-                telegram_chat_id IS NOT NULL AS telegram_linked,
-                password_hash IS NOT NULL AS has_password,
                 created_at
             FROM customers
             WHERE id = ?

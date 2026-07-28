@@ -1,4 +1,4 @@
-name = "shoma-shop-backend"
+name = "shomashopbackend"
 
 main = "src/index.js"
 

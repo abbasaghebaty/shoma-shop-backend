@@ -1,3 +1,10 @@
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization"
+};
+
+
 export function success(data, status = 200) {
   return new Response(
     JSON.stringify({
@@ -7,7 +14,8 @@ export function success(data, status = 200) {
     {
       status,
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        ...corsHeaders
       }
     }
   );
@@ -23,8 +31,12 @@ export function error(message, status = 400) {
     {
       status,
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        ...corsHeaders
       }
     }
   );
 }
+
+
+export { corsHeaders };

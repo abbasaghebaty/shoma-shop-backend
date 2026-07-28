@@ -1,4 +1,5 @@
 import { success, error } from "../utils/response.js";
+import { adminOnly } from "../middleware/adminOnly.js";
 
 
 export async function adminProductsRouter(request, env){
@@ -9,7 +10,7 @@ const url = new URL(request.url);
 
 
 /*
-ثبت کامل محصول
+ثبت کامل محصول (فقط ادمین)
 POST /api/v1/admin/products
 */
 
@@ -18,6 +19,9 @@ if(
 request.method === "POST" &&
 url.pathname === "/api/v1/admin/products"
 ){
+
+const auth = await adminOnly(request, env);
+if (auth instanceof Response) return auth;
 
 
 const body = await request.json();
@@ -203,7 +207,7 @@ VALUES
 
 .bind(
 
-"admin",
+auth.username ?? "admin",
 "CREATE",
 "products",
 productId,

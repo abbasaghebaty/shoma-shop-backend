@@ -1,4 +1,5 @@
 import { success, error } from "../utils/response.js";
+import { adminOnly } from "../middleware/adminOnly.js";
 
 
 export async function productsRouter(request, env){
@@ -7,7 +8,7 @@ const url = new URL(request.url);
 
 
 /*
-GET ALL PRODUCTS
+GET ALL PRODUCTS (عمومی - نیازی به لاگین نیست)
 */
 
 if(
@@ -43,7 +44,7 @@ return success(products.results);
 
 
 /*
-GET SINGLE PRODUCT
+GET SINGLE PRODUCT (عمومی)
 */
 
 if(
@@ -83,13 +84,17 @@ return success(product);
 
 
 /*
-CREATE PRODUCT
+CREATE PRODUCT (فقط ادمین)
 */
 
 if(
 request.method === "POST" &&
 url.pathname === "/api/v1/products"
 ){
+
+const auth = await adminOnly(request, env);
+if (auth instanceof Response) return auth;
+
 
 const body =
 await request.json();
@@ -145,13 +150,16 @@ message:"product created"
 
 
 /*
-UPDATE PRODUCT
+UPDATE PRODUCT (فقط ادمین)
 */
 
 if(
 request.method === "PUT" &&
 url.pathname.match(/^\/api\/v1\/products\/\d+$/)
 ){
+
+const auth = await adminOnly(request, env);
+if (auth instanceof Response) return auth;
 
 
 const id =
@@ -209,13 +217,16 @@ message:"product updated"
 
 
 /*
-DELETE PRODUCT
+DELETE PRODUCT (فقط ادمین)
 */
 
 if(
 request.method === "DELETE" &&
 url.pathname.match(/^\/api\/v1\/products\/\d+$/)
 ){
+
+const auth = await adminOnly(request, env);
+if (auth instanceof Response) return auth;
 
 
 const id =

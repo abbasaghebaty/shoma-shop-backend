@@ -286,3 +286,32 @@ message:"product deleted"
 return null;
 
 }
+
+
+// ثبت تصویر محصول (در صورت وجود لینک)
+
+if (body.image_url) {
+
+await env.DB.prepare(`
+
+INSERT INTO product_images
+(
+product_id,
+image_url
+)
+
+VALUES
+(?,?)
+
+`)
+
+.bind(
+
+productId,
+body.image_url
+
+)
+
+.run();
+
+}

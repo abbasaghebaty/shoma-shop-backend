@@ -7,6 +7,8 @@ import { ordersRouter } from "./routes/orders.js";
 import { paymentsRouter } from "./routes/payments.js";
 import { dashboardRouter } from "./routes/dashboard.js";
 import { adminProductsRouter } from "./routes/admin-products.js";
+import { categoriesRouter } from "./routes/categories.js";
+import { brandsRouter } from "./routes/brands.js";
 import { error, corsHeaders } from "./utils/response.js";
 
 
@@ -60,6 +62,22 @@ const adminProductsResponse =
     await adminProductsRouter(request, env);
 if (adminProductsResponse) {
     return adminProductsResponse;
+}
+
+
+// Categories API (دسته‌بندی‌ها)
+const categoriesResponse =
+    await categoriesRouter(request, env);
+if (categoriesResponse) {
+    return categoriesResponse;
+}
+
+
+// Brands API (برندها)
+const brandsResponse =
+    await brandsRouter(request, env);
+if (brandsResponse) {
+    return brandsResponse;
 }
 
 
